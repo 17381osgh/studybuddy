@@ -544,21 +544,11 @@
             <button id="nav-practice" class="btn nav-btn" onclick="showTab('practice')">Practice Tracker</button>
             <button id="nav-graduation" class="btn nav-btn" onclick="showTab('graduation')">Graduation</button>
             <button id="nav-settings" class="btn nav-btn" onclick="showTab('settings')">Settings</button>
+            <button class="btn nav-btn" onclick="document.getElementById('file-input').click()" style="margin-left: auto; border-color: var(--accent-primary); color: var(--accent-primary); background: rgba(59, 130, 246, 0.1);">+ Upload Grades</button>
         </nav>
 
         <div id="somtoday-tab" class="tab-content active">
-
-        <div id="upload-section" class="upload-area">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary); margin-bottom: 1rem;">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            <h2>Upload Grades</h2>
-            <p>Drag & drop your <b>Somtoday</b> (.stgrades) backup files here</p>
-            <p style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0.7;">Your data stays locally on your device.</p>
-            <input type="file" id="file-input" accept=".stgrades,.json,.csv" multiple>
-        </div>
+            <input type="file" id="file-input" accept=".stgrades,.json,.csv" multiple style="display: none;">
 
         <div class="year-tabs" id="year-tabs">
             <!-- Year tabs will be injected here -->
