@@ -477,6 +477,13 @@
             border-color: var(--accent-primary);
         }
 
+        .nav-upload-btn {
+            margin-left: auto;
+            border-color: var(--accent-primary) !important;
+            color: var(--accent-primary) !important;
+            background: rgba(59, 130, 246, 0.1) !important;
+        }
+
         /* Mobile Optimizations */
         @media (max-width: 768px) {
             body { padding: 1rem; }
@@ -485,8 +492,9 @@
             .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
             .stat-value { font-size: 1.75rem; }
             .stat-card { padding: 1rem; }
-            .nav { overflow-x: auto; padding-bottom: 0.5rem; width: 100%; justify-content: flex-start; }
-            .nav-btn { white-space: nowrap; padding: 0.5rem 1rem; font-size: 0.85rem; }
+            .nav { overflow-x: auto; padding-bottom: 0.5rem; width: 100%; justify-content: flex-start; gap: 0.5rem; }
+            .nav-btn { white-space: nowrap; padding: 0.5rem 1rem !important; font-size: 0.85rem !important; }
+            .nav-upload-btn { margin-left: 0; }
             .subjects-grid { grid-template-columns: 1fr; }
             .chart-wrapper { height: 300px; padding: 1rem; }
             .controls { flex-direction: column; }
@@ -544,7 +552,7 @@
             <button id="nav-practice" class="btn nav-btn" onclick="showTab('practice')">Practice Tracker</button>
             <button id="nav-graduation" class="btn nav-btn" onclick="showTab('graduation')">Graduation</button>
             <button id="nav-settings" class="btn nav-btn" onclick="showTab('settings')">Settings</button>
-            <button class="btn nav-btn" onclick="document.getElementById('file-input').click()" style="margin-left: auto; border-color: var(--accent-primary); color: var(--accent-primary); background: rgba(59, 130, 246, 0.1);">+ Upload Grades</button>
+            <button class="btn nav-btn nav-upload-btn" onclick="document.getElementById('file-input').click()">+ Upload Grades</button>
         </nav>
 
         <div id="somtoday-tab" class="tab-content active">
