@@ -1,0 +1,2376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grade Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-primary: #3b82f6;
+            --accent-secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --glass-blur: blur(12px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+            background-attachment: fixed;
+        }
+
+        /* Hide scrollbars for all elements while maintaining functionality */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        * {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .upload-area {
+            background: var(--card-bg);
+            border: 2px dashed var(--card-border);
+            border-radius: 1rem;
+            padding: 3rem;
+            text-align: center;
+            backdrop-filter: var(--glass-blur);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 2rem;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--accent-primary);
+            background: rgba(30, 41, 59, 0.9);
+        }
+
+        .upload-area p {
+            color: var(--text-muted);
+            margin-top: 1rem;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            backdrop-filter: var(--glass-blur);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            display: none; /* Hidden until data loaded */
+        }
+
+        .chart-wrapper {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            backdrop-filter: var(--glass-blur);
+            height: 400px;
+            position: relative;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .subject-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            backdrop-filter: var(--glass-blur);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .subject-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .subject-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--card-accent, linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)));
+            box-shadow: 0 0 15px var(--card-accent, transparent);
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+
+        .subject-card.disabled {
+            opacity: 0.4;
+            filter: grayscale(0.8);
+        }
+
+        .subject-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .subject-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .subject-toggle {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: color 0.2s;
+        }
+
+        .subject-toggle:hover {
+            color: var(--text-main);
+        }
+
+        .grade-display {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .grade-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+        }
+
+        .grade-us {
+            font-size: 1.25rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .grade-excellent { color: var(--success); }
+        .grade-good { color: #a7f3d0; }
+        .grade-average { color: var(--warning); }
+        .grade-poor { color: var(--danger); }
+
+        .progress-bar-bg {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .period-breakdown {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            border-top: 1px solid var(--card-border);
+            padding-top: 1rem;
+        }
+
+        .period-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .period-label {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+
+        .grade-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            font-size: 0.875rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .grade-item:last-child {
+            border-bottom: none;
+        }
+
+        .grade-info {
+            flex: 1;
+        }
+
+        .grade-desc {
+            color: var(--text-main);
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+
+        .grade-meta {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .grade-val-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .grade-val {
+            font-weight: 600;
+            font-size: 1rem;
+            width: 2.5rem;
+            text-align: right;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 32px;
+            height: 18px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: .4s;
+            border-radius: 18px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--accent-primary);
+        }
+        input:checked + .slider:before {
+            transform: translateX(14px);
+        }
+        input:disabled + .slider {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Year selector tabs */
+        .year-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .year-tab {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 0.5rem 1.5rem;
+            border-radius: 2rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: var(--glass-blur);
+        }
+
+        .year-tab:hover {
+            color: var(--text-main);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .year-tab.active {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+        
+        .year-tab .remove-year {
+            margin-left: 0.5rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        .year-tab .remove-year:hover {
+            opacity: 1;
+        }
+
+        #dashboard {
+            display: none;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .nav {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 1rem;
+            overflow-x: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .nav::-webkit-scrollbar { display: none; }
+
+        .nav-btn {
+            border-radius: 2rem !important;
+            padding: 0.6rem 1.25rem !important;
+            font-size: 0.9rem !important;
+            white-space: nowrap;
+        }
+
+        .nav-btn.active {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            h1 { font-size: 1.75rem; }
+            header { flex-direction: column; gap: 1rem; align-items: flex-start; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+            .stat-value { font-size: 1.75rem; }
+            .stat-card { padding: 1rem; }
+            .nav { overflow-x: auto; padding-bottom: 0.5rem; width: 100%; justify-content: flex-start; }
+            .nav-btn { white-space: nowrap; padding: 0.5rem 1rem; font-size: 0.85rem; }
+            .subjects-grid { grid-template-columns: 1fr; }
+            .chart-wrapper { height: 300px; padding: 1rem; }
+            .controls { flex-direction: column; }
+            .btn { width: 100%; text-align: center; }
+            .subject-modal, .practice-detail-modal { width: 95%; padding: 1.5rem; }
+        }
+
+        /* Graduation Page Styles */
+        .grad-section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            backdrop-filter: var(--glass-blur);
+        }
+
+        .accomplishment-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-left: 4px solid var(--accent-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .grad-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Grade Dashboard</h1>
+            <div id="active-year-display" style="color: var(--text-muted); font-weight: 500;"></div>
+        </header>
+
+        <nav class="nav">
+            <button id="nav-somtoday" class="btn nav-btn active" onclick="showTab('somtoday')">Dashboard</button>
+            <button id="nav-practice" class="btn nav-btn" onclick="showTab('practice')">Practice Tracker</button>
+            <button id="nav-graduation" class="btn nav-btn" onclick="showTab('graduation')">Graduation</button>
+            <button id="nav-settings" class="btn nav-btn" onclick="showTab('settings')">Settings</button>
+        </nav>
+
+        <div id="somtoday-tab" class="tab-content active">
+
+        <div id="upload-section" class="upload-area">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary); margin-bottom: 1rem;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <h2>Upload Grades</h2>
+            <p>Drag & drop your <b>Somtoday</b> (.stgrades) backup files here</p>
+            <p style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0.7;">Your data stays locally on your device.</p>
+            <input type="file" id="file-input" accept=".stgrades,.json,.csv" multiple>
+        </div>
+
+        <div class="year-tabs" id="year-tabs">
+            <!-- Year tabs will be injected here -->
+        </div>
+
+        <div id="dashboard">
+            <div class="stats-grid">
+                <div class="stat-card fade-in" style="animation-delay: 0.1s;">
+                    <div class="stat-value" id="stat-gpa">-</div>
+                    <div class="stat-label">Overall GPA (US)</div>
+                </div>
+                <div class="stat-card fade-in" style="animation-delay: 0.2s;">
+                    <div class="stat-value" id="stat-avg">-</div>
+                    <div class="stat-label">Running Average</div>
+                </div>
+                <div class="stat-card fade-in" style="animation-delay: 0.3s;">
+                    <div class="stat-value" id="stat-best" style="color: var(--success);">-</div>
+                    <div class="stat-label">Best Subject</div>
+                </div>
+                <div class="stat-card fade-in" style="animation-delay: 0.4s;">
+                    <div class="stat-value" id="stat-worst" style="color: var(--danger);">-</div>
+                    <div class="stat-label">Area for Growth</div>
+                </div>
+            </div>
+
+            <div class="charts-container" id="charts-container">
+                <div class="chart-wrapper fade-in" style="animation-delay: 0.5s;">
+                    <canvas id="multiYearChart"></canvas>
+                </div>
+            </div>
+
+            <div class="controls fade-in" style="animation-delay: 0.5s; display: flex; justify-content: space-between; width: 100%;">
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn active" data-filter="all">All Subjects</button>
+                    <button class="btn" data-filter="core">Core Subjects</button>
+                    <button class="btn" data-filter="active">Included in GPA</button>
+                </div>
+                <button class="btn" onclick="openMergeModal()">Combine Subjects</button>
+            </div>
+
+            <div class="subjects-grid" id="subjects-grid">
+                <!-- Subject cards will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="practice-tab" class="tab-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <div>
+                <h2 style="margin-bottom: 0.5rem;">Practice Tracker</h2>
+                <p style="color: var(--text-muted);">Manage your own tests and practice exams</p>
+            </div>
+            <button class="btn active" onclick="openPracticeSubjectModal()">+ Add Subject</button>
+        </div>
+
+        <div class="charts-container" id="practice-charts-container" style="display: none; margin-bottom: 2rem;">
+            <div class="chart-wrapper fade-in">
+                <canvas id="practiceProgressionChart"></canvas>
+            </div>
+        </div>
+        
+        <div id="practice-grid" class="subjects-grid">
+            <!-- Practice subjects will be injected here -->
+        </div>
+    </div>
+
+    <div id="graduation-tab" class="tab-content">
+        <div style="margin-bottom: 2rem;">
+            <h2 style="margin-bottom: 0.5rem;">Graduation Path</h2>
+            <p style="color: var(--text-muted);">Monitor your School Exams (SE) and Central Exams (CE)</p>
+        </div>
+
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-bottom: 2rem;">
+            <div class="stat-card">
+                <div class="stat-value" id="grad-se-avg" style="color: var(--accent-primary);">-</div>
+                <div class="stat-label">Total SE Average</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="grad-target-met" style="color: var(--success);">0%</div>
+                <div class="stat-label">Subjects on Target</div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr; gap: 2rem;" id="grad-main-layout">
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <div class="grad-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                        <h3 style="color: var(--accent-primary); font-size: 1.25rem;">Subjects & Goal Calculator</h3>
+                        <div id="grad-year-filters" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+                    </div>
+                    <div id="grad-subjects-list" style="display: grid; gap: 1rem;">
+                        <!-- Subjects will be injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="grad-section">
+                <h3 style="margin-bottom: 1.5rem; color: var(--accent-secondary); font-size: 1.25rem;">Personal Accomplishments</h3>
+                <div id="accomplishments-list"></div>
+                <button class="btn active" style="margin-top: 1.5rem; width: 100%;" onclick="openAccomplishmentModal()">+ Add New Accomplishment</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-tab" class="tab-content">
+        <div style="margin-bottom: 2rem;">
+            <h2 style="margin-bottom: 0.5rem;">Settings & Data</h2>
+            <p style="color: var(--text-muted);">Manage your dashboard data and exports</p>
+        </div>
+
+        <div class="grad-section">
+            <h3 style="margin-bottom: 1rem;">Data Management</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <button class="btn active" onclick="exportData('general')">Export Everything (JSON)</button>
+                <button class="btn active" onclick="exportData('graduation')">Export Graduation Only (JSON)</button>
+                <button class="btn" style="grid-column: 1 / -1;" onclick="document.getElementById('import-file').click()">Import JSON Data</button>
+                <input type="file" id="import-file" accept=".json" onchange="importData(event)">
+            </div>
+            <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">Note: Importing will merge data with your current dashboard.</p>
+        </div>
+        
+        <div class="grad-section" style="border-color: var(--danger);">
+            <h3 style="color: var(--danger); margin-bottom: 1rem;">Danger Zone</h3>
+            <button class="btn" style="color: var(--danger); border-color: var(--danger);" onclick="if(confirm('Are you sure you want to clear ALL data? This cannot be undone.')){localStorage.clear(); location.reload();}">Clear All Data</button>
+        </div>
+    </div>
+
+    <!-- Modals Backdrop -->
+    <div id="modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;" onclick="closeAllModals()"></div>
+    
+    <!-- Subject Modal -->
+    <div id="subject-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:2rem; border:1px solid var(--card-border); border-radius:1rem; z-index:1000; backdrop-filter:var(--glass-blur); width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div>
+                <h2 id="sm-name" style="margin-bottom: 0.5rem; font-size: 1.5rem;"></h2>
+                <div id="sm-grade" class="grade-display" style="margin-bottom: 0;"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <input type="color" id="sm-color-input" style="border:none; background:none; width:30px; height:30px; cursor:pointer;" title="Change subject color">
+                <button class="btn" onclick="closeSubjectModal()">Close</button>
+            </div>
+        </div>
+        
+        <div style="height: 150px; margin-bottom: 1.5rem; width: 100%;">
+            <canvas id="sm-chart"></canvas>
+        </div>
+
+        <div id="sm-content"></div>
+    </div>
+
+    <!-- Redo Modal -->
+    <div id="redo-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:1.5rem; border:1px solid var(--card-border); border-radius:1rem; z-index:1001; backdrop-filter:var(--glass-blur); width: 90%; max-width: 300px;">
+        <h3 style="margin-bottom: 1rem;">Redo Calculator</h3>
+        <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">Enter a hypothetical grade for this test to see your new average.</p>
+        <input type="number" id="redo-input" class="btn" style="width: 100%; margin-bottom: 1rem; background: rgba(0,0,0,0.2);" min="1" max="10" step="0.1" placeholder="New grade (1-10)">
+        <div style="margin-bottom: 1rem;">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">New Average:</div>
+            <div id="redo-result" style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);">-</div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <button class="btn" onclick="closeRedoModal()">Close</button>
+        </div>
+    </div>
+
+    <!-- Accomplishment Modal -->
+    <div id="accomplishment-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:2rem; border:1px solid var(--card-border); border-radius:1rem; z-index:1000; backdrop-filter:var(--glass-blur); min-width: 320px;">
+        <h3 style="margin-bottom: 1rem;">Add Accomplishment</h3>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Title</label>
+            <input type="text" id="acc-title" class="btn" style="width: 100%; background: rgba(0,0,0,0.2);" placeholder="e.g. Winner Math Olympiad">
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Date</label>
+            <input type="date" id="acc-date" class="btn" style="width: 100%; background: rgba(0,0,0,0.2);">
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button class="btn" onclick="closeAccomplishmentModal()">Cancel</button>
+            <button class="btn active" onclick="saveAccomplishment()">Save</button>
+        </div>
+    </div>
+    <div id="practice-subject-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:2rem; border:1px solid var(--card-border); border-radius:1rem; z-index:1000; backdrop-filter:var(--glass-blur); min-width: 350px;">
+        <h3 style="margin-bottom: 1rem;">Add Practice Subject</h3>
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Subject Name</label>
+            <input type="text" id="ps-name-input" class="btn" style="width: 100%; background: rgba(0,0,0,0.2);" placeholder="e.g. Math Practice">
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button class="btn" onclick="closePracticeSubjectModal()">Cancel</button>
+            <button class="btn active" onclick="addPracticeSubject()">Add Subject</button>
+        </div>
+    </div>
+
+    <!-- Practice Test Modal -->
+    <div id="practice-test-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:2rem; border:1px solid var(--card-border); border-radius:1rem; z-index:1000; backdrop-filter:var(--glass-blur); min-width: 350px;">
+        <h3 id="pt-modal-title" style="margin-bottom: 1rem;">Add Practice Test</h3>
+        <input type="hidden" id="pt-subject-id">
+        <input type="hidden" id="pt-test-index">
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Test Date</label>
+            <input type="date" id="pt-date-input" class="btn" style="width: 100%; background: rgba(0,0,0,0.2);">
+        </div>
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="flex: 1;">
+                <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Points Right</label>
+                <input type="number" id="pt-points-input" class="btn" style="width: 100%; background: rgba(0,0,0,0.2);" placeholder="0">
+            </div>
+            <div style="flex: 1;">
+                <label style="display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Total Points</label>
+                <input type="number" id="pt-total-input" class="btn" style="width: 100%; background: rgba(0,0,0,0.2);" placeholder="100">
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button class="btn" onclick="closePracticeTestModal()">Cancel</button>
+            <button class="btn active" id="pt-submit-btn" onclick="savePracticeTest()">Add Test</button>
+        </div>
+    </div>
+
+    <!-- Practice Detail Modal -->
+    <div id="practice-detail-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:2rem; border:1px solid var(--card-border); border-radius:1rem; z-index:1000; backdrop-filter:var(--glass-blur); width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+            <div>
+                <h2 id="pd-name" style="margin-bottom: 0.5rem; font-size: 1.5rem;"></h2>
+                <div id="pd-avg" class="grade-display" style="margin-bottom: 0;"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <input type="color" id="pd-color-input" style="border:none; background:none; width:30px; height:30px; cursor:pointer;" title="Change subject color">
+                <button class="btn" onclick="closePracticeDetailModal()">Close</button>
+            </div>
+        </div>
+        
+        <div style="height: 200px; margin-bottom: 2rem; width: 100%;">
+            <canvas id="pd-chart"></canvas>
+        </div>
+
+        <div id="pd-history"></div>
+    </div>
+
+    <!-- Merge Modal -->
+    <div id="merge-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:2rem; border:1px solid var(--card-border); border-radius:1rem; z-index:1000; backdrop-filter:var(--glass-blur); min-width: 350px;">
+        <h3 style="margin-bottom: 1rem;">Combine Subjects</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">Combine subjects that might have different names across years (e.g. Binas -> Biologie).</p>
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                <span style="font-size: 0.875rem; color: var(--text-muted);">Alias Subject</span>
+                <select id="merge-from" class="btn" style="background: rgba(0,0,0,0.2);"></select>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                <span style="font-size: 0.875rem; color: var(--text-muted);">Merge into</span>
+                <div id="merge-to-container" style="max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 0.5rem; padding: 0.5rem; border: 1px solid var(--card-border);"></div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button class="btn" onclick="closeMergeModal()">Cancel</button>
+            <button class="btn active" onclick="applyMerge()">Combine</button>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        const state = {
+            datasets: {}, // map of year/id to parsed data
+            rawFiles: {}, // map of id to raw JSON to allow reprocessing
+            subjectMapping: {}, // map of aliasName -> mainName
+            activeDatasetId: null, // Currently viewed year
+            subjectToggles: {}, // { subjectName: boolean }
+            gradeToggles: {}, // { gradeId: boolean }
+            practiceSubjects: [], // { id, name, tests: [{ name, points, total }] }
+            accomplishments: [], // [{ title, date }]
+            graduationGoals: {}, // { subjectName: targetGrade }
+            graduationYears: {}, // { datasetId: boolean }
+            subjectColors: {}, // { subjectName: hex }
+            charts: {
+                multiYear: null,
+                practice: null
+            }
+        };
+
+        function saveState() {
+            try {
+                localStorage.setItem('gradeDashboardState', JSON.stringify({
+                    rawFiles: state.rawFiles,
+                    subjectMapping: state.subjectMapping,
+                    subjectToggles: state.subjectToggles,
+                    gradeToggles: state.gradeToggles,
+                    activeDatasetId: state.activeDatasetId,
+                    practiceSubjects: state.practiceSubjects,
+                    accomplishments: state.accomplishments,
+                    graduationGoals: state.graduationGoals,
+                    graduationYears: state.graduationYears,
+                    subjectColors: state.subjectColors
+                }));
+            } catch (e) {
+                console.warn('Failed to save state to localStorage', e);
+            }
+        }
+
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('gradeDashboardState');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state.rawFiles = parsed.rawFiles || {};
+                    state.subjectMapping = parsed.subjectMapping || {};
+                    state.subjectToggles = parsed.subjectToggles || {};
+                    state.gradeToggles = parsed.gradeToggles || {};
+                    state.activeDatasetId = parsed.activeDatasetId || null;
+                    state.practiceSubjects = parsed.practiceSubjects || [];
+                    state.accomplishments = parsed.accomplishments || [];
+                    state.graduationGoals = parsed.graduationGoals || {};
+                    state.graduationYears = parsed.graduationYears || {};
+                    state.subjectColors = parsed.subjectColors || {};
+                    
+                    if (Object.keys(state.rawFiles).length > 0) {
+                        reprocessAllData();
+                    }
+                    
+                    renderPracticeGrid();
+                }
+            } catch (e) {
+                console.warn('Failed to load state from localStorage', e);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadState);
+
+        // --- Grade Conversion Logic ---
+        function getUSGrade(dutchGrade) {
+            if (dutchGrade >= 8.5) return { letter: 'A+', gpa: 4.0, class: 'grade-excellent' };
+            if (dutchGrade >= 8.0) return { letter: 'A', gpa: 4.0, class: 'grade-excellent' };
+            if (dutchGrade >= 7.5) return { letter: 'A-', gpa: 3.7, class: 'grade-good' };
+            if (dutchGrade >= 7.0) return { letter: 'B+', gpa: 3.3, class: 'grade-good' };
+            if (dutchGrade >= 6.5) return { letter: 'B', gpa: 3.0, class: 'grade-average' };
+            if (dutchGrade >= 6.0) return { letter: 'B-', gpa: 2.7, class: 'grade-average' };
+            if (dutchGrade >= 5.5) return { letter: 'D', gpa: 1.0, class: 'grade-poor' };
+            return { letter: 'F', gpa: 0.0, class: 'grade-poor' };
+        }
+
+        function parseDutchGrade(gradeStr) {
+            if (!gradeStr) return null;
+            // Handle specific non-numeric grades
+            const str = String(gradeStr).trim();
+            if (str === 'G' || str === 'V' || str === 'O' || str === 'Deelge') return null;
+            
+            // Convert comma to dot
+            const num = parseFloat(str.replace(',', '.'));
+            return isNaN(num) ? null : num;
+        }
+
+        // --- Data Parsing ---
+        function processRawData(rawData, fileId, originalFileName = null) {
+            const grades = rawData.grades || rawData.cijfers || [];
+            const yearInfo = rawData.year || {};
+            
+            // Create a readable label for this dataset
+            let label = originalFileName ? originalFileName.replace('.stgrades', '').replace('.json', '') : 'Dataset';
+            if (yearInfo.lesperiode) {
+                label = yearInfo.lesperiode.code;
+                if (yearInfo.studie && yearInfo.studie.code) {
+                    label = `${label} (${yearInfo.studie.code})`;
+                }
+            }
+
+            const processed = {
+                id: fileId,
+                label: label,
+                rawYearInfo: yearInfo,
+                subjects: {}
+            };
+
+            grades.forEach(g => {
+                const numVal = parseDutchGrade(g.CijferStr);
+                let subjNames = g.Vak ? [g.Vak.Omschrijving] : ['Unknown'];
+                const lowerName = subjNames[0].toLowerCase();
+                if (state.subjectMapping[lowerName]) {
+                    const mapped = state.subjectMapping[lowerName];
+                    subjNames = Array.isArray(mapped) ? mapped : [mapped];
+                }
+                const subjAbbr = g.Vak ? g.Vak.Afkorting : 'UNK';
+                
+                const weight = g.CijferKolom ? (g.CijferKolom.Weging || 0) : 0;
+                const type = g.CijferKolom ? g.CijferKolom.KolomSoort : 1; // 1=test, 2=calculated
+                const isVC = g.CijferKolom && g.CijferKolom.KolomOmschrijving === 'VC';
+                const periodName = g.CijferPeriode ? g.CijferPeriode.Naam : 'Unknown';
+
+                const gradeObjTemplate = {
+                    id: g.CijferId,
+                    strVal: g.CijferStr,
+                    numVal: numVal,
+                    weight: weight,
+                    type: type,
+                    isVC: isVC,
+                    period: periodName,
+                    desc: g.CijferKolom ? g.CijferKolom.KolomOmschrijving : '',
+                    date: g.DatumIngevoerd,
+                    teltMee: g.TeltMee !== false
+                };
+
+                subjNames.forEach((subjName, idx) => {
+                    if (!processed.subjects[subjName]) {
+                        processed.subjects[subjName] = {
+                            name: subjName,
+                            abbr: subjAbbr,
+                            allGrades: [],
+                            vcGrade: null, // Voortschrijdend Cijfer (Running Average)
+                            periods: {}
+                        };
+                    }
+
+                    const subj = processed.subjects[subjName];
+                    const gradeObj = { ...gradeObjTemplate };
+                    if (idx > 0) gradeObj.id = `${gradeObj.id}_${idx}`;
+
+                    subj.allGrades.push(gradeObj);
+
+                    // Default toggle state to true
+                    if (state.gradeToggles[gradeObj.id] === undefined) {
+                        state.gradeToggles[gradeObj.id] = true;
+                    }
+
+                    // If it's the official VC and has a numeric value, store it
+                    if (isVC && numVal !== null) {
+                        subj.vcGrade = gradeObj;
+                    }
+                });
+            });
+
+            // Post-process subjects
+            Object.values(processed.subjects).forEach(subj => {
+                // Initialize default subject toggle state if not exists
+                // Exclude some non-academic subjects by default from GPA
+                const excludeByDefault = ['Testimonium', 'Lichamelijke Opvoeding', 'LO', 'Project', 'KuVo'].includes(subj.name);
+                if (state.subjectToggles[subj.name] === undefined) {
+                    state.subjectToggles[subj.name] = !excludeByDefault;
+                }
+            });
+
+            return processed;
+        }
+
+        // --- Calculation Logic ---
+        function calculateSubjectAverage(subject) {
+            // Recalculate average based on toggled grades (type 1 only, w > 0)
+            let totalWeight = 0;
+            let totalSum = 0;
+
+            subject.allGrades.forEach(g => {
+                if (g.type === 1 && g.numVal !== null && g.weight > 0 && g.teltMee && state.gradeToggles[g.id]) {
+                    totalWeight += g.weight;
+                    totalSum += (g.numVal * g.weight);
+                }
+            });
+
+            if (totalWeight === 0) return null;
+            return totalSum / totalWeight;
+        }
+
+        function calculateOverallStats(dataset) {
+            let totalGpaPoints = 0;
+            let totalGpaSubjects = 0;
+            let totalScore = 0;
+            let totalScoreSubjects = 0;
+
+            let bestSubj = null;
+            let bestScore = -1;
+            let worstSubj = null;
+            let worstScore = 11;
+
+            Object.values(dataset.subjects).forEach(subj => {
+                if (!state.subjectToggles[subj.name]) return; // Skip if subject disabled
+
+                // Prefer recalculated avg, fallback to official VC, fallback to null
+                let avg = calculateSubjectAverage(subj);
+                if (avg === null && subj.vcGrade && state.gradeToggles[subj.vcGrade.id]) {
+                    avg = subj.vcGrade.numVal;
+                }
+
+                if (avg !== null) {
+                    const us = getUSGrade(avg);
+                    totalGpaPoints += us.gpa;
+                    totalGpaSubjects++;
+                    
+                    totalScore += avg;
+                    totalScoreSubjects++;
+
+                    if (avg > bestScore) { bestScore = avg; bestSubj = subj.abbr; }
+                    if (avg < worstScore) { worstScore = avg; worstSubj = subj.abbr; }
+                }
+            });
+
+            return {
+                gpa: totalGpaSubjects > 0 ? (totalGpaPoints / totalGpaSubjects) : 0,
+                avg: totalScoreSubjects > 0 ? (totalScore / totalScoreSubjects) : 0,
+                best: bestSubj || '-',
+                bestScore: bestScore,
+                worst: worstSubj || '-',
+                worstScore: worstScore
+            };
+        }
+
+        // --- UI Rendering ---
+        function updateDashboard() {
+            if (!state.activeDatasetId || !state.datasets[state.activeDatasetId]) return;
+            
+            document.getElementById('dashboard').style.display = 'block';
+            
+            const dataset = state.datasets[state.activeDatasetId];
+            document.getElementById('active-year-display').textContent = `Viewing: ${dataset.label}`;
+
+            const stats = calculateOverallStats(dataset);
+            
+            // Animate counters
+            animateValue('stat-gpa', 0, stats.gpa, 1000, val => val.toFixed(2));
+            animateValue('stat-avg', 0, stats.avg, 1000, val => val.toFixed(1));
+            
+            document.getElementById('stat-best').textContent = stats.best;
+            document.getElementById('stat-worst').textContent = stats.worst;
+
+            renderSubjectsGrid(dataset);
+            updateCharts();
+            saveState();
+        }
+
+        function renderSubjectsGrid(dataset) {
+            const grid = document.getElementById('subjects-grid');
+            grid.innerHTML = '';
+
+            const subjects = Object.values(dataset.subjects).sort((a, b) => a.name.localeCompare(b.name));
+
+            subjects.forEach((subj, index) => {
+                let avg = calculateSubjectAverage(subj);
+                let isCalculated = true;
+                
+                if (avg === null && subj.vcGrade) {
+                    avg = subj.vcGrade.numVal;
+                    isCalculated = false;
+                }
+
+                const isActive = state.subjectToggles[subj.name];
+                
+                const card = document.createElement('div');
+                card.className = `subject-card fade-in ${!isActive ? 'disabled' : ''}`;
+                card.style.animationDelay = `${0.1 * (index % 10)}s`;
+                
+                // Apply custom color if exists
+                const customColor = state.subjectColors[subj.name.toLowerCase()];
+                if (customColor) {
+                    card.style.setProperty('--card-accent', customColor);
+                    card.style.background = `linear-gradient(to bottom, ${customColor}08, var(--card-bg))`;
+                    card.style.boxShadow = `0 15px 40px ${customColor}15`;
+                } else {
+                    card.style.removeProperty('--card-accent');
+                    card.style.background = 'var(--card-bg)';
+                }
+
+                card.onclick = function(e) {
+                    if (e.target.closest('.switch') || e.target.closest('input')) return;
+                    openSubjectModal(subj.name);
+                };
+
+                let headerHtml = `
+                    <div class="subject-header">
+                        <div class="subject-name">${subj.name} <span style="color:var(--text-muted);font-size:0.8em;">(${subj.abbr})</span></div>
+                        <label class="switch" title="Include in GPA">
+                            <input type="checkbox" class="subject-toggle-input" data-subj="${subj.name}" ${isActive ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                `;
+
+                let contentHtml = '';
+                if (avg !== null) {
+                    const us = getUSGrade(avg);
+                    const colorClass = isActive ? us.class : '';
+                    
+                    contentHtml += `
+                        <div class="grade-display">
+                            <div class="grade-number ${colorClass}">${avg.toFixed(1)}</div>
+                            <div class="grade-us ${colorClass}">${us.letter}</div>
+                        </div>
+                        <div class="progress-bar-bg" style="margin-bottom:0;">
+                            <div class="progress-bar-fill" style="width: ${avg * 10}%"></div>
+                        </div>
+                    `;
+                } else {
+                    contentHtml += `
+                        <div class="grade-display">
+                            <div class="grade-number" style="color:var(--text-muted)">-</div>
+                        </div>
+                        <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:0;">No numeric grades</p>
+                    `;
+                }
+                
+                card.innerHTML = headerHtml + contentHtml;
+                grid.appendChild(card);
+            });
+
+            // Add event listeners
+            document.querySelectorAll('.subject-toggle-input').forEach(el => {
+                el.addEventListener('change', (e) => {
+                    state.subjectToggles[e.target.dataset.subj] = e.target.checked;
+                    updateDashboard();
+                });
+            });
+
+            document.querySelectorAll('.grade-toggle-input').forEach(el => {
+                el.addEventListener('change', (e) => {
+                    state.gradeToggles[e.target.dataset.id] = e.target.checked;
+                    updateDashboard();
+                });
+            });
+        }
+
+        function closeSubjectModal() {
+            document.getElementById('modal-backdrop').style.display = 'none';
+            document.getElementById('subject-modal').style.display = 'none';
+        }
+
+        function openSubjectModal(subjName) {
+            const dataset = state.datasets[state.activeDatasetId];
+            if (!dataset || !dataset.subjects[subjName]) return;
+
+            const subj = dataset.subjects[subjName];
+            
+            document.getElementById('sm-name').innerHTML = `${subj.name} <span style="color:var(--text-muted);font-size:0.8em;">(${subj.abbr})</span>`;
+            
+            let avg = calculateSubjectAverage(subj);
+            if (avg === null && subj.vcGrade) avg = subj.vcGrade.numVal;
+
+            let gradeHtml = '';
+            if (avg !== null) {
+                const us = getUSGrade(avg);
+                gradeHtml = `
+                    <div class="grade-number ${us.class}" style="font-size: 2.5rem;">${avg.toFixed(1)}</div>
+                    <div class="grade-us ${us.class}">${us.letter}</div>
+                `;
+            } else {
+                gradeHtml = `<div class="grade-number" style="color:var(--text-muted); font-size: 2.5rem;">-</div>`;
+            }
+            document.getElementById('sm-grade').innerHTML = gradeHtml;
+
+            // Setup color input
+            const colorInput = document.getElementById('sm-color-input');
+            const currentColor = state.subjectColors[subj.name.toLowerCase()] || '#3b82f6';
+            colorInput.value = currentColor;
+            colorInput.onchange = (e) => {
+                state.subjectColors[subj.name.toLowerCase()] = e.target.value;
+                saveState();
+                updateDashboard();
+            };
+
+            let contentHtml = '';
+
+            const periodAvgs = {};
+            subj.allGrades.forEach(g => {
+                if (g.type === 2 && g.desc.startsWith('R') && g.numVal !== null) {
+                    periodAvgs[g.desc] = g.numVal;
+                }
+            });
+
+            if (Object.keys(periodAvgs).length > 0) {
+                contentHtml += `<div class="period-breakdown">`;
+                Object.keys(periodAvgs).sort().forEach(p => {
+                    contentHtml += `
+                        <div class="period-item">
+                            <div class="period-label">${p}</div>
+                            <div>${periodAvgs[p].toFixed(1)}</div>
+                        </div>
+                    `;
+                });
+                contentHtml += `</div>`;
+            }
+
+            const werkhouding = subj.allGrades.filter(g => g.period && g.period.startsWith('ETC')).sort((a,b) => a.period.localeCompare(b.period));
+            const adviezen = subj.allGrades.filter(g => g.period === 'ADV');
+
+            if (werkhouding.length > 0 || adviezen.length > 0) {
+                contentHtml += `<div class="period-breakdown" style="flex-wrap: wrap; gap: 0.5rem; justify-content: flex-start;">`;
+                if (werkhouding.length > 0) {
+                    contentHtml += `<div style="width: 100%; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--text-muted); font-weight: 600;">Werkhouding</div>`;
+                    werkhouding.forEach(w => {
+                        contentHtml += `<div class="period-item" style="margin-right: 1.5rem;" title="${w.desc}">
+                            <div class="period-label">${w.period}</div>
+                            <div style="font-weight: 600; color: var(--text-main);">${w.strVal}</div>
+                        </div>`;
+                    });
+                }
+                if (adviezen.length > 0) {
+                    contentHtml += `<div style="width: 100%; font-size: 0.75rem; text-transform: uppercase; margin-top: 0.5rem; margin-bottom: 0.5rem; color: var(--text-muted); font-weight: 600;">Advies</div>`;
+                    adviezen.forEach(a => {
+                        let label = a.desc ? a.desc.replace('Definitief advies', 'Def.').replace('Voorlopig advies', 'Voorl.') : 'ADV';
+                        contentHtml += `<div class="period-item" style="margin-right: 1.5rem;" title="${a.desc}">
+                            <div class="period-label">${label}</div>
+                            <div style="font-weight: 600; color: var(--text-main);">${a.strVal}</div>
+                        </div>`;
+                    });
+                }
+                contentHtml += `</div>`;
+            }
+
+            const testGrades = subj.allGrades.filter(g => g.type === 1).sort((a,b) => new Date(b.date) - new Date(a.date));
+            
+            contentHtml += `
+                <div style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
+                    <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">Individual Grades (${testGrades.length})</div>
+            `;
+
+            if (testGrades.length === 0) {
+                contentHtml += `<div style="text-align:center;color:var(--text-muted);font-size:0.875rem;">No test grades found</div>`;
+            }
+
+            testGrades.forEach(g => {
+                const gActive = state.gradeToggles[g.id];
+                contentHtml += `
+                    <div class="grade-item" style="${!gActive ? 'opacity:0.5' : ''}">
+                        <div class="grade-info" style="cursor:pointer;" onclick="openRedoModal('${g.id}', '${subj.name}')" title="Click to calculate redo impact">
+                            <div class="grade-desc" title="${g.desc}">${g.desc || g.period || 'Test'}</div>
+                            <div class="grade-meta">${g.period} • W: ${g.weight}</div>
+                        </div>
+                        <div class="grade-val-container">
+                            <div class="grade-val" style="color: ${g.numVal ? getUSGrade(g.numVal).class : 'inherit'}">
+                                ${g.strVal}
+                            </div>
+                            <label class="switch" title="Include grade">
+                                <input type="checkbox" class="modal-grade-toggle-input" data-id="${g.id}" data-subj="${subj.name}" ${gActive ? 'checked' : ''} ${g.weight === 0 || !g.teltMee ? 'disabled' : ''}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                `;
+            });
+
+            contentHtml += `</div>`;
+            document.getElementById('sm-content').innerHTML = contentHtml;
+
+            // Bind listeners for toggles in modal
+            document.querySelectorAll('.modal-grade-toggle-input').forEach(el => {
+                el.addEventListener('change', (e) => {
+                    state.gradeToggles[e.target.dataset.id] = e.target.checked;
+                    updateDashboard(); // updates the grid and average
+                    
+                    // Re-render the modal content to reflect the new average
+                    openSubjectModal(e.target.dataset.subj);
+                });
+            });
+
+            document.getElementById('modal-backdrop').style.display = 'block';
+            document.getElementById('subject-modal').style.display = 'block';
+
+            // Draw chart with all years' grades
+            let allYearsGrades = [];
+            Object.values(state.datasets).forEach(d => {
+                if (d.subjects[subjName]) {
+                    allYearsGrades = allYearsGrades.concat(d.subjects[subjName].allGrades);
+                }
+            });
+
+            if (window.drawSubjectChart) {
+                const canvas = document.getElementById('sm-chart');
+                if (canvas.chartInstance) {
+                    canvas.chartInstance.destroy();
+                    canvas.chartInstance = null;
+                }
+                window.drawSubjectChart('sm-chart', allYearsGrades, subjName);
+            }
+        }
+
+        function closeRedoModal() {
+            document.getElementById('redo-modal').style.display = 'none';
+        }
+
+        function openRedoModal(gradeId, subjName) {
+            const dataset = state.datasets[state.activeDatasetId];
+            if (!dataset || !dataset.subjects[subjName]) return;
+            const subj = dataset.subjects[subjName];
+
+            const redoModal = document.getElementById('redo-modal');
+            const redoInput = document.getElementById('redo-input');
+            const redoResult = document.getElementById('redo-result');
+
+            redoInput.value = '';
+            redoResult.textContent = '-';
+            redoModal.style.display = 'block';
+
+            const oldClone = redoInput.cloneNode(true);
+            redoInput.parentNode.replaceChild(oldClone, redoInput);
+            const newInput = document.getElementById('redo-input');
+            
+            newInput.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                if (isNaN(val) || val < 1 || val > 10) {
+                    redoResult.textContent = '-';
+                    return;
+                }
+                
+                const oldGrade = subj.allGrades.find(g => g.id === gradeId);
+                const weight = oldGrade ? oldGrade.weight : 1;
+                
+                let sum = 0;
+                let totalWeight = 0;
+                subj.allGrades.forEach(g => {
+                    if (state.gradeToggles[g.id] && g.weight > 0 && g.type === 1 && g.teltMee && g.numVal !== null) {
+                        if (g.id !== gradeId) {
+                            sum += g.numVal * g.weight;
+                            totalWeight += g.weight;
+                        }
+                    }
+                });
+
+                sum += val * weight;
+                totalWeight += weight;
+
+                if (totalWeight > 0) {
+                    const newAvg = sum / totalWeight;
+                    redoResult.textContent = newAvg.toFixed(1);
+                    const us = getUSGrade(newAvg);
+                    redoResult.className = us.class;
+                } else {
+                    redoResult.textContent = '-';
+                }
+            });
+            
+            newInput.focus();
+        }
+
+        window.drawSubjectChart = function(canvasId, grades, subjName) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            if (canvas.chartInstance) return;
+
+            const ctx = canvas.getContext('2d');
+            
+            const numericGrades = grades
+                .filter(g => g.type === 1 && g.numVal !== null && g.period !== 'ADV' && !(g.period && g.period.startsWith('ETC')))
+                .sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            if (numericGrades.length === 0) return;
+
+            const labels = numericGrades.map(g => {
+                const date = new Date(g.date);
+                return `${date.getDate()}/${date.getMonth()+1}`;
+            });
+            const data = numericGrades.map(g => g.numVal);
+
+            const customColor = state.subjectColors[subjName.toLowerCase()] || '#60a5fa';
+
+            canvas.chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Grade',
+                        data: data,
+                        borderColor: customColor,
+                        backgroundColor: customColor + '10',
+                        pointBackgroundColor: customColor,
+                        pointRadius: 4,
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            min: 1, max: 10,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: 'rgba(255, 255, 255, 0.5)', font: { size: 10 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: 'rgba(255, 255, 255, 0.5)', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        };
+
+        // --- Charting ---
+        function updateCharts() {
+            const datasets = Object.values(state.datasets);
+            if (datasets.length < 2) {
+                document.getElementById('charts-container').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('charts-container').style.display = 'grid';
+            
+            // Prepare multi-year chart data
+            // Find common subjects
+            const allSubjects = new Set();
+            datasets.forEach(d => {
+                Object.values(d.subjects).forEach(s => {
+                    if (state.subjectToggles[s.name]) allSubjects.add(s.name);
+                });
+            });
+
+            // Sort datasets by label (assuming label has year info like '2324')
+            datasets.sort((a, b) => a.label.localeCompare(b.label));
+            const labels = datasets.map(d => d.label);
+
+            const colors = [
+                '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', 
+                '#ec4899', '#06b6d4', '#84cc16'
+            ];
+
+            const chartDatasets = Array.from(allSubjects).map((subjName, i) => {
+                const data = datasets.map(d => {
+                    if (!d.subjects[subjName]) return null;
+                    const subj = d.subjects[subjName];
+                    let avg = calculateSubjectAverage(subj);
+                    if (avg === null && subj.vcGrade) avg = subj.vcGrade.numVal;
+                    return avg;
+                });
+
+                const customColor = state.subjectColors[subjName.toLowerCase()];
+                const color = customColor || colors[i % colors.length];
+
+                return {
+                    label: subjName,
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: color + '08',
+                    pointBackgroundColor: color,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1.5,
+                    pointRadius: 4,
+                    pointHoverRadius: 8,
+                    borderWidth: 3.5,
+                    tension: 0.4,
+                    fill: true,
+                    spanGaps: true
+                };
+            });
+
+            // Filter out datasets that are all null
+            const validChartDatasets = chartDatasets.filter(ds => ds.data.some(v => v !== null));
+
+            const ctx = document.getElementById('multiYearChart').getContext('2d');
+            
+            if (state.charts.multiYear) {
+                state.charts.multiYear.destroy();
+            }
+
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = "'Inter', sans-serif";
+
+            state.charts.multiYear = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: validChartDatasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { boxWidth: 12 }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Subject Progression (Running Averages)',
+                            color: '#f8fafc',
+                            font: { size: 16, weight: 'bold' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 1,
+                            max: 10,
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- File Handling ---
+        const dropZone = document.getElementById('upload-section');
+        const fileInput = document.getElementById('file-input');
+        const yearTabsContainer = document.getElementById('year-tabs');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFiles(e.target.files);
+            }
+        });
+
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    const fileId = 'ds_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+                    
+                    try {
+                        const json = JSON.parse(content);
+                        if (!json) throw new Error("Invalid format");
+
+                        state.rawFiles[fileId] = json;
+                        const processed = processRawData(json, fileId, file.name);
+                        state.datasets[fileId] = processed;
+                        
+                        if (!state.activeDatasetId) {
+                            state.activeDatasetId = fileId;
+                        }
+                        
+                        renderYearTabs();
+                        updateDashboard();
+                    } catch (err) {
+                        console.error('Error parsing file:', err);
+                        alert('Could not parse file. Please ensure it is a valid .stgrades or .json file.');
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        function reprocessAllData() {
+            Object.keys(state.rawFiles).forEach(fileId => {
+                const processed = processRawData(state.rawFiles[fileId], fileId);
+                state.datasets[fileId] = processed;
+            });
+            renderYearTabs();
+            updateDashboard();
+        }
+
+        function openMergeModal() {
+            const subjectsSet = new Set();
+            Object.values(state.datasets).forEach(d => {
+                Object.values(d.subjects).forEach(s => subjectsSet.add(s.name));
+            });
+            const subjects = Array.from(subjectsSet).sort();
+            
+            const fromSelect = document.getElementById('merge-from');
+            const toContainer = document.getElementById('merge-to-container');
+            fromSelect.innerHTML = subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+            toContainer.innerHTML = subjects.map(s => `
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.875rem; cursor: pointer;">
+                    <input type="checkbox" value="${s}"> ${s}
+                </label>
+            `).join('');
+            
+            document.getElementById('modal-backdrop').style.display = 'block';
+            document.getElementById('merge-modal').style.display = 'block';
+        }
+
+        function closeMergeModal() {
+            document.getElementById('modal-backdrop').style.display = 'none';
+            document.getElementById('merge-modal').style.display = 'none';
+        }
+
+        function applyMerge() {
+            const from = document.getElementById('merge-from').value;
+            const toCheckboxes = document.querySelectorAll('#merge-to-container input:checked');
+            const to = Array.from(toCheckboxes).map(cb => cb.value);
+            if (from && to.length > 0) {
+                state.subjectMapping[from.toLowerCase()] = to;
+                reprocessAllData();
+                closeMergeModal();
+            }
+        }
+
+        function renderYearTabs() {
+            yearTabsContainer.innerHTML = '';
+            
+            const datasets = Object.values(state.datasets).sort((a,b) => a.label.localeCompare(b.label));
+            
+            datasets.forEach(ds => {
+                const tab = document.createElement('div');
+                tab.className = `year-tab ${ds.id === state.activeDatasetId ? 'active' : ''}`;
+                
+                tab.innerHTML = `
+                    ${ds.label}
+                    <span class="remove-year" data-id="${ds.id}" title="Remove file">×</span>
+                `;
+                
+                tab.onclick = (e) => {
+                    if (e.target.classList.contains('remove-year')) {
+                        delete state.datasets[ds.id];
+                        if (state.activeDatasetId === ds.id) {
+                            const remaining = Object.keys(state.datasets);
+                            state.activeDatasetId = remaining.length > 0 ? remaining[0] : null;
+                            if (!state.activeDatasetId) {
+                                document.getElementById('dashboard').style.display = 'none';
+                            }
+                        }
+                        renderYearTabs();
+                        updateDashboard();
+                        e.stopPropagation();
+                        return;
+                    }
+                    
+                    state.activeDatasetId = ds.id;
+                    renderYearTabs();
+                    updateDashboard();
+                };
+                
+                yearTabsContainer.appendChild(tab);
+            });
+        }
+
+        // --- Utils ---
+        function animateValue(id, start, end, duration, formatter = v => Math.round(v)) {
+            if (start === end) {
+                document.getElementById(id).textContent = formatter(end);
+                return;
+            }
+            const obj = document.getElementById(id);
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                // Ease out quad
+                const easeOut = progress * (2 - progress);
+                const current = start + easeOut * (end - start);
+                obj.textContent = formatter(current);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    obj.textContent = formatter(end);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // Setup filter buttons
+        document.querySelectorAll('.controls .btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.controls .btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                const filter = e.target.dataset.filter;
+                document.querySelectorAll('.subject-card').forEach(card => {
+                    if (filter === 'all') {
+                        card.style.display = 'block';
+                    } else if (filter === 'active') {
+                        card.style.display = card.classList.contains('disabled') ? 'none' : 'block';
+                    } else if (filter === 'core') {
+                        // Example core subjects
+                        const isCore = card.querySelector('.subject-name').textContent.match(/Wiskunde|Engels|Nederlands/);
+                        card.style.display = isCore ? 'block' : 'none';
+                    }
+                });
+            });
+        });
+
+        // --- Tab Management ---
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+            document.getElementById(`nav-${tabId}`).classList.add('active');
+            
+            if (tabId === 'graduation') {
+                renderGraduation();
+            }
+            if (tabId === 'practice') {
+                renderPracticeGrid();
+            }
+        }
+
+        // --- Practice Tracker Logic ---
+        function openPracticeSubjectModal() {
+            document.getElementById('modal-backdrop').style.display = 'block';
+            document.getElementById('practice-subject-modal').style.display = 'block';
+            document.getElementById('ps-name-input').focus();
+        }
+
+        function closePracticeSubjectModal() {
+            document.getElementById('modal-backdrop').style.display = 'none';
+            document.getElementById('practice-subject-modal').style.display = 'none';
+        }
+
+        function addPracticeSubject() {
+            const nameInput = document.getElementById('ps-name-input');
+            const name = nameInput.value.trim();
+            if (name) {
+                const id = 'ps_' + Date.now();
+                state.practiceSubjects.push({ id, name, tests: [] });
+                nameInput.value = '';
+                closePracticeSubjectModal();
+                renderPracticeGrid();
+                saveState();
+            }
+        }
+
+        function openPracticeDetailModal(subjectId) {
+            const subj = state.practiceSubjects.find(s => s.id === subjectId);
+            if (!subj) return;
+
+            document.getElementById('pd-name').innerText = subj.name;
+            
+            const last3 = subj.tests.slice(-3);
+            let tEarned = 0, tPoints = 0;
+            last3.forEach(t => { tEarned += t.points; tPoints += t.total; });
+            const avg = tPoints > 0 ? (tEarned / tPoints * 100) : 0;
+            
+            document.getElementById('pd-avg').innerHTML = `
+                <div class="grade-number">${avg.toFixed(1)}%</div>
+                <div class="grade-us" style="font-size: 0.8rem; color: var(--text-muted);">Last 3 Avg</div>
+            `;
+
+            document.getElementById('modal-backdrop').style.display = 'block';
+            document.getElementById('practice-detail-modal').style.display = 'block';
+
+            // Setup color input
+            const colorInput = document.getElementById('pd-color-input');
+            const currentColor = state.subjectColors[subj.id] || '#3b82f6';
+            colorInput.value = currentColor;
+            colorInput.onchange = (e) => {
+                state.subjectColors[subj.id] = e.target.value;
+                saveState();
+                renderPracticeGrid();
+            };
+
+            renderPracticeDetailChart(subj);
+            renderPracticeDetailHistory(subj);
+        }
+
+        function closePracticeDetailModal() {
+            document.getElementById('modal-backdrop').style.display = 'none';
+            document.getElementById('practice-detail-modal').style.display = 'none';
+        }
+
+        function renderPracticeDetailChart(subj) {
+            const canvas = document.getElementById('pd-chart');
+            if (canvas.chartInstance) canvas.chartInstance.destroy();
+            const ctx = canvas.getContext('2d');
+
+            const customColor = state.subjectColors[subj.id] || '#3b82f6';
+
+            canvas.chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: subj.tests.map(t => new Date(t.date).toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit' })),
+                    datasets: [{
+                        label: 'Performance %',
+                        data: subj.tests.map(t => (t.points / t.total * 100)),
+                        borderColor: customColor,
+                        backgroundColor: customColor + '10',
+                        pointBackgroundColor: customColor,
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+                        x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)' } }
+                    }
+                }
+            });
+        }
+
+        function renderPracticeDetailHistory(subj) {
+            const container = document.getElementById('pd-history');
+            container.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.5rem;">
+                    <span style="font-size: 0.8rem; font-weight: bold; color: var(--text-muted); text-transform: uppercase;">Test History</span>
+                    <button class="btn active" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="openPracticeTestModal('${subj.id}')">+ Add New</button>
+                </div>
+            `;
+
+            const reverseTests = [...subj.tests].reverse();
+            reverseTests.forEach((t, i) => {
+                const idx = subj.tests.length - 1 - i;
+                const percent = (t.points / t.total * 100).toFixed(1);
+                const d = new Date(t.date);
+                const dateStr = d.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                
+                const item = document.createElement('div');
+                item.className = 'grade-item';
+                item.style.cursor = 'pointer';
+                item.onclick = () => openPracticeTestModal(subj.id, idx);
+                item.innerHTML = `
+                    <div class="grade-info">
+                        <div class="grade-desc">${dateStr}</div>
+                        <div class="grade-meta">${t.points}/${t.total} points</div>
+                    </div>
+                    <div class="grade-val-container">
+                        <div class="grade-val" style="margin-right: 1rem;">${percent}%</div>
+                        <button class="btn" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="event.stopPropagation(); removePracticeTest('${subj.id}', ${idx}); renderPracticeDetailHistory(state.practiceSubjects.find(s => s.id === '${subj.id}'));">×</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function openPracticeTestModal(subjectId, testIndex = null) {
+            document.getElementById('pt-subject-id').value = subjectId;
+            document.getElementById('pt-test-index').value = testIndex !== null ? testIndex : '';
+            
+            const title = document.getElementById('pt-modal-title');
+            const submitBtn = document.getElementById('pt-submit-btn');
+            
+            if (testIndex !== null) {
+                const subj = state.practiceSubjects.find(s => s.id === subjectId);
+                const test = subj.tests[testIndex];
+                title.innerText = 'Edit Practice Test';
+                submitBtn.innerText = 'Save Changes';
+                document.getElementById('pt-date-input').value = test.date;
+                document.getElementById('pt-points-input').value = test.points;
+                document.getElementById('pt-total-input').value = test.total;
+            } else {
+                title.innerText = 'Add Practice Test';
+                submitBtn.innerText = 'Add Test';
+                document.getElementById('pt-date-input').valueAsDate = new Date();
+                document.getElementById('pt-points-input').value = '';
+                document.getElementById('pt-total-input').value = '';
+            }
+
+            document.getElementById('modal-backdrop').style.display = 'block';
+            document.getElementById('practice-test-modal').style.display = 'block';
+            document.getElementById('pt-date-input').focus();
+        }
+
+        function closePracticeTestModal() {
+            document.getElementById('modal-backdrop').style.display = 'none';
+            document.getElementById('practice-test-modal').style.display = 'none';
+        }
+
+        function savePracticeTest() {
+            const subjectId = document.getElementById('pt-subject-id').value;
+            const testIndex = document.getElementById('pt-test-index').value;
+            const date = document.getElementById('pt-date-input').value;
+            const points = parseFloat(document.getElementById('pt-points-input').value);
+            const total = parseFloat(document.getElementById('pt-total-input').value);
+            
+            if (date && !isNaN(points) && !isNaN(total) && total > 0) {
+                const subj = state.practiceSubjects.find(s => s.id === subjectId);
+                if (subj) {
+                    if (testIndex !== '') {
+                        // Edit existing
+                        subj.tests[parseInt(testIndex)] = { date, points, total };
+                    } else {
+                        // Add new
+                        subj.tests.push({ date, points, total });
+                    }
+                    
+                    // Sort tests by date
+                    subj.tests.sort((a,b) => new Date(a.date) - new Date(b.date));
+                    
+                    closePracticeTestModal();
+                    renderPracticeGrid();
+                    
+                    // If detail modal is open, refresh it
+                    const detailModal = document.getElementById('practice-detail-modal');
+                    if (detailModal.style.display === 'block') {
+                        renderPracticeDetailChart(subj);
+                        renderPracticeDetailHistory(subj);
+                    }
+                    
+                    saveState();
+                }
+            }
+        }
+
+        function removePracticeSubject(id) {
+            if (confirm('Are you sure you want to remove this subject?')) {
+                state.practiceSubjects = state.practiceSubjects.filter(s => s.id !== id);
+                renderPracticeGrid();
+                saveState();
+            }
+        }
+
+        function removePracticeTest(subjectId, testIndex) {
+            const subj = state.practiceSubjects.find(s => s.id === subjectId);
+            if (subj) {
+                subj.tests.splice(testIndex, 1);
+                renderPracticeGrid();
+                saveState();
+            }
+        }
+
+        function closeAllModals() {
+            closeMergeModal();
+            closeSubjectModal();
+            closeRedoModal();
+            closePracticeSubjectModal();
+            closePracticeTestModal();
+            closePracticeDetailModal();
+            closeAccomplishmentModal();
+        }
+
+        // --- Graduation Page Logic ---
+        function renderGraduation() {
+            const subjectsList = document.getElementById('grad-subjects-list');
+            const accomplishmentsDiv = document.getElementById('accomplishments-list');
+            const yearFiltersDiv = document.getElementById('grad-year-filters');
+            
+            subjectsList.innerHTML = '';
+            accomplishmentsDiv.innerHTML = '';
+            yearFiltersDiv.innerHTML = '';
+
+            // 1. Year Filtering
+            const datasets = Object.values(state.datasets);
+            datasets.sort((a,b) => a.label.localeCompare(b.label)).forEach(d => {
+                const btn = document.createElement('button');
+                btn.className = `btn ${state.graduationYears[d.id] ? 'active' : ''}`;
+                btn.style.fontSize = '0.75rem';
+                btn.style.padding = '0.3rem 0.7rem';
+                btn.innerText = d.label;
+                btn.onclick = () => {
+                    state.graduationYears[d.id] = !state.graduationYears[d.id];
+                    saveState();
+                    renderGraduation();
+                };
+                yearFiltersDiv.appendChild(btn);
+            });
+
+            // 2. Filter data
+            const gradDatasets = datasets.filter(d => state.graduationYears[d.id]);
+            const seAverages = {};
+            
+            gradDatasets.forEach(d => {
+                Object.values(d.subjects).forEach(s => {
+                    let avg = calculateSubjectAverage(s);
+                    if (avg === null && s.vcGrade) avg = s.vcGrade.numVal;
+                    if (avg !== null) {
+                        if (!seAverages[s.name]) seAverages[s.name] = { sum: 0, count: 0 };
+                        seAverages[s.name].sum += avg;
+                        seAverages[s.name].count++;
+                    }
+                });
+            });
+
+            let totalSE = 0;
+            let totalCount = 0;
+            let targetMetCount = 0;
+
+            Object.keys(seAverages).forEach(name => {
+                const avg = seAverages[name].sum / seAverages[name].count;
+                totalSE += avg;
+                totalCount++;
+
+                const target = state.graduationGoals[name] || 6.0;
+                const neededCE = (target * 2) - avg;
+                if (avg >= target) targetMetCount++;
+
+                const color = state.subjectColors[name.toLowerCase()] || 'var(--accent-primary)';
+                
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    background: rgba(255,255,255,0.02);
+                    border: 1px solid var(--card-border);
+                    border-radius: 1rem;
+                    padding: 1.25rem;
+                    display: grid;
+                    grid-template-columns: 1fr 1fr 120px;
+                    align-items: center;
+                    gap: 1.5rem;
+                    border-left: 4px solid ${color};
+                `;
+                
+                card.innerHTML = `
+                    <div>
+                        <div style="font-weight: 700; font-size: 1rem; margin-bottom: 0.25rem;">${name}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">SE Average: <b style="color:var(--text-main)">${avg.toFixed(1)}</b></div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">CE Goal</span>
+                            <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                <span style="font-size: 0.75rem;">Target:</span>
+                                <input type="number" step="0.1" value="${target}" style="width: 45px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); color: #fff; padding: 2px 4px; border-radius: 4px; font-size: 0.75rem;" onchange="updateGradGoal('${name}', this.value)">
+                            </div>
+                        </div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                            <div style="width: ${Math.min((avg/target)*100, 100)}%; height: 100%; background: ${avg >= target ? 'var(--success)' : color};"></div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">Need on CE</div>
+                        <div style="font-size: 1.25rem; font-weight: 800; color: ${neededCE > 10 ? 'var(--danger)' : (neededCE > 7 ? 'var(--warning)' : 'var(--text-main)')}">${neededCE.toFixed(1)}</div>
+                    </div>
+                `;
+                subjectsList.appendChild(card);
+            });
+
+            // Update stats
+            if (totalCount > 0) {
+                document.getElementById('grad-se-avg').innerText = (totalSE / totalCount).toFixed(2);
+                document.getElementById('grad-target-met').innerText = Math.round((targetMetCount / totalCount) * 100) + '%';
+            }
+
+            // 3. Accomplishments
+            if (state.accomplishments.length === 0) {
+                accomplishmentsDiv.innerHTML = '<div style="text-align:center; color: var(--text-muted); font-size: 0.85rem; padding: 2rem;">No accomplishments recorded yet.</div>';
+            } else {
+                state.accomplishments.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach((acc, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'accomplishment-card';
+                    div.innerHTML = `
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.95rem;">${acc.title}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">${new Date(acc.date).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                        </div>
+                        <button class="btn" style="padding: 0.25rem 0.5rem; border-color: transparent;" onclick="removeAccomplishment(${i})">×</button>
+                    `;
+                    accomplishmentsDiv.appendChild(div);
+                });
+            }
+
+            // Mobile adjustments for grid
+            if (window.innerWidth < 768) {
+                document.querySelectorAll('#grad-subjects-list > div').forEach(c => {
+                    c.style.gridTemplateColumns = '1fr';
+                    c.style.gap = '1rem';
+                    c.querySelector('div:last-child').style.textAlign = 'left';
+                });
+            }
+        }
+
+        function updateGradGoal(name, val) {
+            state.graduationGoals[name] = parseFloat(val);
+            saveState();
+            renderGraduation();
+        }
+
+        function openAccomplishmentModal() {
+            document.getElementById('modal-backdrop').style.display = 'block';
+            document.getElementById('accomplishment-modal').style.display = 'block';
+            document.getElementById('acc-date').valueAsDate = new Date();
+        }
+
+        function closeAccomplishmentModal() {
+            document.getElementById('modal-backdrop').style.display = 'none';
+            document.getElementById('accomplishment-modal').style.display = 'none';
+        }
+
+        function saveAccomplishment() {
+            const title = document.getElementById('acc-title').value.trim();
+            const date = document.getElementById('acc-date').value;
+            if (title && date) {
+                state.accomplishments.push({ title, date });
+                document.getElementById('acc-title').value = '';
+                closeAccomplishmentModal();
+                saveState();
+                renderGraduation();
+            }
+        }
+
+        function removeAccomplishment(idx) {
+            state.accomplishments.splice(idx, 1);
+            saveState();
+            renderGraduation();
+        }
+
+        // --- Export / Import Logic ---
+        function exportData(type) {
+            let dataToExport = {};
+            if (type === 'general') {
+                dataToExport = {
+                    ...state,
+                    charts: null // Don't export chart instances
+                };
+            } else {
+                // Graduation only
+                const gradDatasets = {};
+                Object.keys(state.datasets).forEach(id => {
+                    if (state.datasets[id].label.includes('BL 2') || state.datasets[id].label.includes('BL 3')) {
+                        gradDatasets[id] = state.rawFiles[id];
+                    }
+                });
+                dataToExport = {
+                    rawFiles: gradDatasets,
+                    accomplishments: state.accomplishments,
+                    graduationGoals: state.graduationGoals,
+                    subjectColors: state.subjectColors,
+                    practiceSubjects: state.practiceSubjects
+                };
+            }
+
+            const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `grade_dashboard_${type}_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    
+                    // Merge rawFiles
+                    if (imported.rawFiles) {
+                        state.rawFiles = { ...state.rawFiles, ...imported.rawFiles };
+                    }
+                    if (imported.subjectMapping) {
+                        state.subjectMapping = { ...state.subjectMapping, ...imported.subjectMapping };
+                    }
+                    if (imported.practiceSubjects) {
+                        state.practiceSubjects = [...state.practiceSubjects, ...imported.practiceSubjects];
+                        // Filter duplicates by ID
+                        state.practiceSubjects = Array.from(new Map(state.practiceSubjects.map(s => [s.id, s])).values());
+                    }
+                    if (imported.accomplishments) {
+                        state.accomplishments = [...state.accomplishments, ...imported.accomplishments];
+                    }
+                    if (imported.graduationGoals) {
+                        state.graduationGoals = { ...state.graduationGoals, ...imported.graduationGoals };
+                    }
+                    if (imported.subjectColors) {
+                        state.subjectColors = { ...state.subjectColors, ...imported.subjectColors };
+                    }
+
+                    saveState();
+                    reprocessAllData();
+                    alert('Data imported successfully!');
+                    location.reload();
+                } catch (err) {
+                    console.error('Import error:', err);
+                    alert('Failed to import data. Please ensure it is a valid JSON file.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function renderPracticeGrid() {
+            const grid = document.getElementById('practice-grid');
+            grid.innerHTML = '';
+            
+            state.practiceSubjects.forEach(subj => {
+                const card = document.createElement('div');
+                card.className = 'subject-card fade-in';
+                card.style.cursor = 'pointer';
+                
+                // Apply custom color
+                const customColor = state.subjectColors[subj.id];
+                if (customColor) {
+                    card.style.setProperty('--card-accent', customColor);
+                    card.style.background = `linear-gradient(to bottom, ${customColor}08, var(--card-bg))`;
+                    card.style.boxShadow = `0 15px 40px ${customColor}15`;
+                } else {
+                    card.style.removeProperty('--card-accent');
+                    card.style.background = 'var(--card-bg)';
+                }
+
+                card.onclick = (e) => {
+                    if (!e.target.closest('button') && !e.target.closest('.grade-item')) {
+                        openPracticeDetailModal(subj.id);
+                    }
+                };
+                
+                // Average of LAST 3 tests
+                const last3 = subj.tests.slice(-3);
+                let totalPoints = 0;
+                let totalEarned = 0;
+                last3.forEach(t => {
+                    totalPoints += t.total;
+                    totalEarned += t.points;
+                });
+                
+                const avgPercent = totalPoints > 0 ? (totalEarned / totalPoints * 100) : 0;
+                
+                let html = `
+                    <div class="subject-header">
+                        <div class="subject-name">${subj.name}</div>
+                        <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="removePracticeSubject('${subj.id}')">Remove</button>
+                    </div>
+                    <div class="grade-display">
+                        <div class="grade-number">${avgPercent.toFixed(1)}%</div>
+                        <div class="grade-us" style="font-size: 0.8rem; color: var(--text-muted);">Last 3 Avg.</div>
+                    </div>
+                    <div class="progress-bar-bg" style="margin-bottom: 1.5rem;">
+                        <div class="progress-bar-fill" style="width: ${avgPercent}%"></div>
+                    </div>
+                    
+                    <div style="border-top: 1px solid var(--card-border); padding-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <span style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">History</span>
+                            <button class="btn active" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="openPracticeTestModal('${subj.id}')">+ Add Test</button>
+                        </div>
+                `;
+                
+                if (subj.tests.length === 0) {
+                    html += `<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 1rem 0;">No tests yet</div>`;
+                } else {
+                    // Show all tests in the list, but newest first
+                    const reverseTests = [...subj.tests].reverse();
+                    reverseTests.forEach((t, i) => {
+                        const idx = subj.tests.length - 1 - i;
+                        const percent = (t.points / t.total * 100).toFixed(1);
+                        const d = new Date(t.date);
+                        const dateStr = d.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit' });
+                        html += `
+                            <div class="grade-item" onclick="event.stopPropagation(); openPracticeTestModal('${subj.id}', ${idx})">
+                                <div class="grade-info">
+                                    <div class="grade-desc">${dateStr}</div>
+                                    <div class="grade-meta">${t.points}/${t.total} pts</div>
+                                </div>
+                                <div class="grade-val-container">
+                                    <div class="grade-val" style="margin-right: 1rem;">${percent}%</div>
+                                    <button class="btn" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="event.stopPropagation(); removePracticeTest('${subj.id}', ${idx})">×</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                html += `</div>`;
+                card.innerHTML = html;
+                grid.appendChild(card);
+            });
+
+            renderPracticeChart();
+        }
+
+        function renderPracticeChart() {
+            const container = document.getElementById('practice-charts-container');
+            const ctx = document.getElementById('practiceProgressionChart').getContext('2d');
+            
+            // Check if we have any data
+            const hasTests = state.practiceSubjects.some(s => s.tests.length > 0);
+            if (!hasTests) {
+                container.style.display = 'none';
+                return;
+            }
+            container.style.display = 'block';
+
+            if (state.charts.practice) state.charts.practice.destroy();
+
+            // Get unique dates
+            const allDates = new Set();
+            state.practiceSubjects.forEach(s => s.tests.forEach(t => allDates.add(t.date)));
+            const sortedDates = Array.from(allDates).sort();
+
+            const datasets = state.practiceSubjects.map((subj, i) => {
+                const customColor = state.subjectColors[subj.id];
+                const color = customColor || `hsl(${(i * 137.5) % 360}, 70%, 60%)`;
+                return {
+                    label: subj.name,
+                    data: sortedDates.map(date => {
+                        const test = subj.tests.find(t => t.date === date);
+                        return test ? (test.points / test.total * 100) : null;
+                    }),
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    pointBackgroundColor: color,
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    tension: 0.3,
+                    spanGaps: true
+                };
+            }).filter(d => d.data.some(v => v !== null));
+
+            state.charts.practice = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sortedDates.map(d => new Date(d).toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit' })),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#fff', boxWidth: 10, padding: 20 } },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        y: { 
+                            min: 0, max: 100,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: 'rgba(255,255,255,0.5)', callback: v => v + '%' }
+                        },
+                        x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)' } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
