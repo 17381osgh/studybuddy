@@ -668,6 +668,16 @@
         </div>
 
         <div class="grad-section">
+            <h3 style="margin-bottom: 1rem;">Personalization</h3>
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <button class="btn" onclick="document.getElementById('favicon-input').click()">Set Custom Favicon</button>
+                <input type="file" id="favicon-input" accept="image/*" style="display: none;" onchange="updateFavicon(event)">
+                <button class="btn" style="border-color: var(--danger); color: var(--danger);" onclick="resetFavicon()">Reset Favicon</button>
+            </div>
+            <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">Upload an image to personalize your browser tab icon.</p>
+        </div>
+
+        <div class="grad-section">
             <h3 style="margin-bottom: 1rem;">Data Management</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <button class="btn active" onclick="exportData('general')">Export Everything (JSON)</button>
@@ -680,7 +690,7 @@
         
         <div class="grad-section" style="border-color: var(--danger);">
             <h3 style="color: var(--danger); margin-bottom: 1rem;">Danger Zone</h3>
-            <button class="btn" style="color: var(--danger); border-color: var(--danger);" onclick="if(confirm('Are you sure you want to clear ALL data? This cannot be undone.')){localStorage.clear(); location.reload();}">Clear All Data</button>
+            <button class="btn" style="color: var(--danger); border-color: var(--danger); width: 100%;" onclick="clearAllData()">Clear All Data</button>
         </div>
     </div>
 
@@ -827,6 +837,7 @@
             accomplishments: [], // [{ title, date }]
             graduationGoals: {}, // { subjectName: targetGrade }
             graduationYears: {}, // { datasetId: boolean }
+            customFavicon: null,
             subjectColors: {}, // { subjectName: hex }
             charts: {
                 multiYear: null,
@@ -846,6 +857,7 @@
                     accomplishments: state.accomplishments,
                     graduationGoals: state.graduationGoals,
                     graduationYears: state.graduationYears,
+                    customFavicon: state.customFavicon,
                     subjectColors: state.subjectColors
                 }));
             } catch (e) {
@@ -867,7 +879,12 @@
                     state.accomplishments = parsed.accomplishments || [];
                     state.graduationGoals = parsed.graduationGoals || {};
                     state.graduationYears = parsed.graduationYears || {};
+                    state.customFavicon = parsed.customFavicon || null;
                     state.subjectColors = parsed.subjectColors || {};
+                    
+                    if (state.customFavicon) {
+                        applyFavicon(state.customFavicon);
+                    }
                     
                     if (Object.keys(state.rawFiles).length > 0) {
                         reprocessAllData();
@@ -2201,6 +2218,12 @@
                     if (imported.graduationGoals) {
                         state.graduationGoals = { ...state.graduationGoals, ...imported.graduationGoals };
                     }
+                    if (imported.graduationYears) {
+                        state.graduationYears = { ...state.graduationYears, ...imported.graduationYears };
+                    }
+                    if (imported.customFavicon) {
+                        state.customFavicon = imported.customFavicon;
+                    }
                     if (imported.subjectColors) {
                         state.subjectColors = { ...state.subjectColors, ...imported.subjectColors };
                     }
@@ -2215,6 +2238,44 @@
                 }
             };
             reader.readAsText(file);
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear ALL data? This will reset your entire dashboard, including custom colors, practice tests, and graduation goals. This cannot be undone.')) {
+                localStorage.removeItem('grade_dashboard_state');
+                location.reload();
+            }
+        }
+
+        function updateFavicon(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = e.target.result;
+                state.customFavicon = data;
+                applyFavicon(data);
+                saveState();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function applyFavicon(data) {
+            let link = document.querySelector("link[rel*='icon']");
+            if (!link) {
+                link = document.createElement('link');
+                link.rel = 'icon';
+                document.head.appendChild(link);
+            }
+            link.href = data;
+        }
+
+        function resetFavicon() {
+            if (confirm('Reset to default favicon?')) {
+                state.customFavicon = null;
+                saveState();
+                location.reload();
+            }
         }
 
         function renderPracticeGrid() {
